@@ -31,17 +31,17 @@ export const generate = Effect.fn("OpenCode2Generation.generate")(function* (
       ).pipe(Effect.ignore),
   );
   if (!input.files.length) {
-    return (yield* Native.request("session.generate", (signal) =>
+    return (yield* Native.requestLong("session.generate", (signal) =>
       client.session.generate({ sessionID: session.id, prompt: input.prompt }, { signal }),
     )).text;
   }
-  yield* Native.request("session.prompt", (signal) =>
+  yield* Native.requestLong("session.prompt", (signal) =>
     client.session.prompt(
       { sessionID: session.id, text: input.prompt, files: [...input.files] },
       { signal },
     ),
   );
-  yield* Native.request("session.wait", (signal) =>
+  yield* Native.requestLong("session.wait", (signal) =>
     client.session.wait({ sessionID: session.id }, { signal }),
   );
   const state = yield* Native.request("session.get", (signal) =>

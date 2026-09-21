@@ -16,11 +16,16 @@ export class OpenCode2RequestError extends Schema.TaggedError<OpenCode2RequestEr
   }
 }
 
-export const request = <A>(operation: string, run: (signal: AbortSignal) => Promise<A>) =>
+/** Long-running calls (session.wait, prompt/generate) cancel only via signal/abort. */
+export const requestLong = <A>(operation: string, run: (signal: AbortSignal) => Promise<A>) =>
   Effect.tryPromise({
     try: run,
     catch: (cause) => new OpenCode2RequestError({ operation, cause }),
-  }).pipe(
+  });
+
+/** Short calls (create/get/update/interrupt/message) fail fast after 30 seconds. */
+export const request = <A>(operation: string, run: (signal: AbortSignal) => Promise<A>) =>
+  requestLong(operation, run).pipe(
     Effect.timeout("30 seconds"),
     Effect.mapError((cause) =>
       cause._tag === "OpenCode2RequestError"
