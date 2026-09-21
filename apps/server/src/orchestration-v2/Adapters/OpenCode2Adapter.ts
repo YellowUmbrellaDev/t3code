@@ -1039,11 +1039,6 @@ export function make(options: {
                 yield* call("session.switchAgent", (signal) =>
                   client.session.switchAgent({ sessionID: nativeID, agent }, { signal }),
                 );
-                if (generation !== stopGeneration || closing)
-                  return yield* new ProviderAdapterProtocolError({
-                    driver,
-                    detail: "OpenCode turn start was cancelled",
-                  });
                 const startedAt = yield* DateTime.now;
                 const turn: OrchestrationV2ProviderTurn = {
                   id: ids.derive.providerTurn({
@@ -1069,6 +1064,13 @@ export function make(options: {
                 };
                 active = current;
                 turns.set(turn.id, turn);
+                // A Stop that landed while the session was being prepared arrives here:
+                // no turn was admitted, so surface a clean interrupted terminal instead
+                // of a protocol error. `current` exists even though `active` did not.
+                if (generation !== stopGeneration || closing) {
+                  yield* mutex.withPermit(settle(current, "interrupted"));
+                  return;
+                }
                 yield* emit({
                   type: "provider_session.updated",
                   driver,
