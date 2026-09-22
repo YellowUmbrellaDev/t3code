@@ -193,7 +193,9 @@ export const OpenCodeDriver: ProviderDriver<OpenCodeSettings, OpenCodeDriverEnv>
             Effect.map((server) => server.version.startsWith("2.")),
             Effect.scoped,
           )
-        : serverOwner.withServer((server) => Effect.succeed(server.version.startsWith("2.")));
+        : effectiveConfig.enabled
+          ? serverOwner.withServer((server) => Effect.succeed(server.version.startsWith("2.")))
+          : Effect.succeed(false);
       const nativeAdapter = OpenCode2Adapter.make({
         instanceId,
         connect: connect.pipe(Effect.map(Native.make)),
